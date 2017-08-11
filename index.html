@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>mnemo keyboard test</title>
+        <link rel="stylesheet" href="style.css">
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+        <script src="block-configs.js"></script>
+        <script src="mkey.js"></script>
+    </head>
+    <body>
+        <div id="data">
+            <select name="stage" placeholder="ステージ名">
+            </select>
+            幅 <span id="stage-width">3</span>
+            高さ <span id="stage-height">3</span>
+            <br/>
+            <code>localStorage.boardData</code>
+            <input name="board-data" placeholder='[{"stageName": ...'/>
+            <ul id="save-list"></ul>
+            <button id="new-save" disabled="disabled"><u>S</u>ave</button>
+            <ul id="new-save-list"></ul>
+            <code>new boardData</code>
+            <input name="new-board-data" readonly="readonly" placeholder='new save here'/><br/>
+        </div>
+        <table id="board"></table>
+        <table id="block-table"></table>
+    </body>
+</html>
