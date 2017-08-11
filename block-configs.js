@@ -374,7 +374,7 @@ Blocks = {
             out: 'bottom',
         },
         weight: 3,
-        key: 'l',
+        key: 'o', preceding: 'wireL',
     },
     sqrt: {
         type: 'calc',
