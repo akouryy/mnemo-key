@@ -1,6 +1,8 @@
 # mnemo-key
 edit mnemo board by keyboard
 
+https://akouryy.github.io/mnemo-key/
+
 ## 操作方法
 * [MNEMO](https://mnemo.pro) のローカルストレージの `boardData` の内容(最初と最後の引用符除く)を、 `localStorage.boardData` と書かれている欄にコピー&ペーストする **(この内容はどこかにバックアップすることを推奨する)** 。
 * ステージを選択するとセーブデータ一覧が表示されるので、編集したいセーブデータを選択する。
