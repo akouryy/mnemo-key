@@ -229,6 +229,7 @@ jQuery($ => {
         }
 
         boardX = Math.floor(board.width / 2);
+        boardY = 0;
         focusedBlock$Td().addClass('focus');
     }
 
