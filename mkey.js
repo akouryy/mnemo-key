@@ -145,6 +145,7 @@ jQuery($ => {
         $stageWidth .text(stage.width);
         $stageHeight.text(stage.height);
         updateSaveList();
+        initBoard({stageName: name, timestamp: 0, boardData: []});
     });
     fn();
 
