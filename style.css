@@ -14,14 +14,15 @@ input.error {
     cursor: pointer;
 }
 
-#save-list > li.focus {
-    color: #600;
-    font-weight: bold;
-}
-
 #new-save-list > li {
     cursor: pointer;
     color: #060;
+}
+
+#save-list > li.focus,
+#new-save-list > li.focus {
+    color: #600;
+    font-weight: bold;
 }
 
 #board {
@@ -111,6 +112,7 @@ input.error {
     background: #ffc;
     color: #900;
     font-family: monospace;
+    font-size: 0.8em;
     font-style: normal;
     padding: 1px;
     border: 2px outset #993;

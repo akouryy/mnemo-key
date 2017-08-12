@@ -117,7 +117,7 @@ jQuery($ => {
     const $keyTable     = $('#key-table');
     const $keyModal     = $('#key-modal')
     let stage = Stages[0];
-    let boardData = [], newData;
+    let boardData = [], newData = [];
     let board$Td = null;
     let board = null;
     let boardX = 0, boardY = 0;
@@ -157,27 +157,37 @@ jQuery($ => {
     });
     fn();
 
-    function updateSaveList() {
-        $saveList.html('');
-        for(const d of boardData) {
-            if(d.stageName == stage.name) {
+    function _Imp_updateSaveList($list, data, showDataCond, showStageName) {
+        $list.html('');
+        for(const d of data) {
+            if(showDataCond(d)) {
                 const $li = $('<li>');
-                $li.text(new Date(d.timestamp).toLocaleString() + ` (${d.boardData.length} blocks)`);
+                $li.html(
+                    (showStageName ? d.stageName + '<br/>' : '') +
+                    new Date(d.timestamp).toLocaleString() + ` [${d.boardData.length}]`
+                );
                 $li.click(() => {
                     $saveList.children().removeClass('focus');
+                    $newSaveList.children().removeClass('focus');
                     $li.addClass('focus');
                     initBoard(d);
                 });
-                $saveList.append($li);
+                $list.append($li);
             }
         }
+    }
+
+    function updateSaveList() {
+        _Imp_updateSaveList($saveList, boardData, d => d.stageName == stage.name, false);
+    }
+    function updateNewSaveList() {
+        _Imp_updateSaveList($newSaveList, newData, _ => true /*show all*/, true);
     }
 
     $boardData.change(fn = () => {
         $boardData.removeClass('error');
         try {
             boardData = JSON.parse($boardData.val());
-            newData = boardData.slice();
             updateSaveList();
         } catch (err) {
             $boardData.addClass('error');
@@ -185,7 +195,9 @@ jQuery($ => {
     });
     fn();
 
-    $newSave.click(() => {
+    $newSave.click(saveNew);
+
+    function saveNew() {
         if(!board) return;
         const data = [];
         for(let y = 0; y < board.height; y++) {
@@ -196,10 +208,10 @@ jQuery($ => {
             }
         }
         newData.push({stageName: board.stageName, timestamp: Date.now(), boardData: data});
-        $newBoardData.val(JSON.stringify(newData));
+        $newBoardData.val(JSON.stringify(boardData.concat(newData)));
+        updateNewSaveList();
         alert("新しいセーブデータを localStorage.boardData に保存する前に、必ず以前の localStorage.boardData のバックアップをとってください。");
-    });
-
+    }
 
     function initBoard(data) {
         $newSave.prop('disabled', false);
@@ -390,6 +402,12 @@ jQuery($ => {
                     updateBlock({x: x, y: y, type: c.type, rotate: c.rotate});
                 });
                 changeBlockFocus(true, boardX, boardY);
+                return false;
+            }
+
+        case 83: // s
+            if(e.ctrlKey) {
+                saveNew();
                 return false;
             }
 
