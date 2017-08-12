@@ -108,14 +108,14 @@ jQuery($ => {
     const $selectStage  = $('select[name=stage]');
     const $stageWidth   = $('#stage-width');
     const $stageHeight  = $('#stage-height');
-    const $boardData    = $('input[name=board-data]')
+    const $boardData    = $('input[name=board-data]');
     const $saveList     = $('#save-list');
     const $newSave      = $('#new-save').prop('disabled', true);
     const $newSaveList  = $('#new-save-list');
     const $newBoardData = $('input[name=new-board-data]');
     const $board        = $('#board');
     const $keyTable     = $('#key-table');
-    const $keyModal     = $('#key-modal')
+    const $keyModal     = $('#key-modal');
     let stage = Stages[0];
     let boardData = [], newData = [];
     let board$Td = null;
@@ -232,12 +232,12 @@ jQuery($ => {
 
         $board.html('');
         board$Td = [];
-        for(const row of board) {
+        for(const [y, row] of board.entries()) {
             const $tr = $('<tr>').appendTo($board);
             const row$Td = [];
             board$Td.push(row$Td);
 
-            for(const cell of row) {
+            for(const [x, cell] of row.entries()) {
                 const $td = $('<td>').appendTo($tr);
                 $td.addClass(`rotate-${cell.rotate}`);
                 row$Td.push($td);
@@ -245,8 +245,17 @@ jQuery($ => {
                     const $img = $('<img>').appendTo($td);
                     $img.attr('src', `https://mnemo.pro/image/${cell.type}.png`);
                 }
+
+                $td.click(e => {
+                    changeBlockFocus(e.shiftKey, x, y);
+                    $board.focus();
+                    return false;
+                });
+
+                $td.mousedown(_ => false);
             }
         }
+        $board.focus();
 
         selectionStart = [boardX, boardY] = [Math.floor(board.width / 2), 0];
         focusedBlock$Td().addClass('focus');
@@ -414,6 +423,7 @@ jQuery($ => {
         case 191: // /?
             if(e.shiftKey) {
                 $keyModal.show(300);
+                $keyModal.focus();
                 return false;
             }
         }
@@ -443,11 +453,13 @@ jQuery($ => {
         case 191: // /?
             if(e.shiftKey) {
                 $keyModal.hide(300);
+                $board.focus();
                 return false;
             }
 
         case 27: // Esc
             $keyModal.hide(300);
+            $board.focus();
             return false;
         }
     }

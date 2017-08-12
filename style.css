@@ -31,6 +31,10 @@ input.error {
     border-collapse: collapse;
 }
 
+#board:focus {
+    border: 3px solid #300;
+}
+
 #board td {
     box-sizing: border-box;
     height: 2em;
