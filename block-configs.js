@@ -506,7 +506,7 @@ Blocks = {
             out: 'bottom',
         },
         weight: 3,
-        key: '?',
+        key: ':',
     },
     diode: {
         type: 'calc2',

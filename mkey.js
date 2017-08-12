@@ -114,7 +114,8 @@ jQuery($ => {
     const $newSaveList  = $('#new-save-list');
     const $newBoardData = $('input[name=new-board-data]');
     const $board        = $('#board');
-    const $blockTable   = $('#block-table');
+    const $keyTable     = $('#key-table');
+    const $keyModal     = $('#key-modal')
     let stage = Stages[0];
     let boardData = [], newData;
     let board$Td = null;
@@ -127,16 +128,22 @@ jQuery($ => {
         $selectStage.append($(`<option value=${s.name}>${s.title}</option>`));
     }
 
+    const $keyTableFooter = $keyTable.children().remove();
     for(const row of BlockTable) {
-        const $tr = $('<tr>').appendTo($blockTable);
+        const $tr = $('<tr>').appendTo($keyTable);
         for(const cell of row) {
-            const $td = $('<td>').appendTo($tr);
-            $td.attr('title', `${cell} (${Blocks[cell].rawKey.toUpperCase()})`);
-            const $img = $('<img>').appendTo($td);
-            $img.attr('src', `https://mnemo.pro/image/${cell}.png`);
-            $tr.append($(`<td><span>${Blocks[cell].rawKey.toUpperCase()}</span></td>`));
+            $('<td>')
+                .attr('title', `${cell} (${Blocks[cell].rawKey.toUpperCase()})`)
+                .append(
+                    $('<img>').attr('src', `https://mnemo.pro/image/${cell}.png`)
+                )
+                .appendTo($tr);
+            $('<td>')
+                .append($('<span>').text(Blocks[cell].rawKey.toUpperCase()))
+                .appendTo($tr);
         }
     }
+    $keyTableFooter.appendTo($keyTable);
 
     let fn;
 
@@ -303,13 +310,18 @@ jQuery($ => {
         }
     }
 
-    function updateBlockSelection({type = -1, rotateDiff = 0}) {
-        forEachSelection((x, y) => updateBlock({x: x, y: y, type: type, rotateDiff: rotateDiff}));
+    function updateBlockSelection({type = -1, rotate = -1, rotateDiff = 0}) {
+        forEachSelection((x, y) =>
+            updateBlock({x: x, y: y, type: type, rotate: rotate, rotateDiff: rotateDiff})
+        );
     }
 
     $(document).keydown($board, e => {
         const target = e.target.tagName.toLowerCase();
         if(['form', 'input', 'select', 'option', 'button'].includes(target)) return;
+        if($keyModal.is(':visible')) {
+            return keydownOnKeyModal(e);
+        }
 
         switch(e.keyCode) {
         case 37: case 38: case 39: case 40: // ←↑→↓
@@ -326,16 +338,27 @@ jQuery($ => {
             changeBlockFocus(e.shiftKey, 0, boardY); return false;
 
         case 32: // space
-            if(e.shiftKey) {
-                updateBlockSelection({rotateDiff: -1});
+            if(e.ctrlKey) {
+                updateBlockSelection({rotate: 0});
             } else {
-                updateBlockSelection({rotateDiff: +1});
+                if(e.shiftKey) {
+                    updateBlockSelection({rotateDiff: -1});
+                } else {
+                    updateBlockSelection({rotateDiff: +1});
+                }
             }
             return false;
 
         case 8: case 46: // backspace, delete
             updateBlockSelection({type: null});
             return false;
+
+        case 65: // a
+            if(e.ctrlKey) {
+                selectionStart = [0, 0];
+                changeBlockFocus(true, -1, -1);
+                return false;
+            }
 
         case 67: case 88: // cx
             if(e.ctrlKey) {
@@ -369,10 +392,22 @@ jQuery($ => {
                 changeBlockFocus(true, boardX, boardY);
                 return false;
             }
+
+        case 191: // /?
+            if(e.shiftKey) {
+                $keyModal.show(300);
+                return false;
+            }
         }
     });
 
     $(document).keypress($board, e => {
+        const target = e.target.tagName.toLowerCase();
+        if(['form', 'input', 'select', 'option', 'button', 'side'].includes(target)) return;
+        if($keyModal.is(':visible')) {
+            return; // keydownOnKeyModal(e);
+        }
+
         if(!e.ctrlKey) {
             const c = String.fromCharCode(e.which).toLowerCase();
             const m = BlockKeyMap[c];
@@ -384,4 +419,18 @@ jQuery($ => {
             }
         }
     });
+
+    function keydownOnKeyModal(e) {
+        switch(e.which) {
+        case 191: // /?
+            if(e.shiftKey) {
+                $keyModal.hide(300);
+                return false;
+            }
+
+        case 27: // Esc
+            $keyModal.hide(300);
+            return false;
+        }
+    }
 });

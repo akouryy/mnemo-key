@@ -24,6 +24,26 @@
             <input name="new-board-data" readonly="readonly" autocomplete="off" placeholder="new save here"/><br/>
         </div>
         <table id="board"></table>
-        <table id="block-table"></table>
+        <table id="key-table">
+            <tr><td colspan="7" class="no-mono">その他の操作を表示</td><td>?</td></tr>
+        </table>
+        <side id="key-modal">
+            <h2>キーボードショートカット一覧</h2>
+            <dl id="key-map">
+                <dt><i>↑</i>, <i>↓</i>, <i>←</i>, <i>→</i></dt> <dd>移動</dd>
+                <dt><i>PageUp</i>, <i>PageDown</i>, <i>Home</i>, <i>End</i></dt> <dd>端に移動</dd>
+                <dt><i>Space</i></dt> <dd>回転</dd>
+                <dt><i>Shift</i> + <i>Space</i></dt> <dd>逆回転</dd>
+                <dt><i>Ctrl</i> + <i>Space</i></dt> <dd>回転をリセット</dd>
+                <dt><i>Backspace</i>, <i>Delete</i></dt> <dd>削除</dd>
+                <dt><i>Shift</i> + 【移動キー】</dt> <dd>選択範囲</dd>
+                <dt><i>Ctrl</i> + <i>A</i></dt> <dd>全選択</dd>
+                <dt><i>Ctrl</i> + <i>C</i></dt> <dd>コピー</dd>
+                <dt><i>Ctrl</i> + <i>X</i></dt> <dd>カット</dd>
+                <dt><i>Ctrl</i> + <i>V</i></dt> <dd>貼り付け</dd>
+                <dt><i>Ctrl</i> + <i>S</i></dt> <dd>セーブデータを追加</dd>
+                <dt><i>?</i>, <i>Esc</i></dt> <dd>この一覧を表示、隠す</dd>
+            </dl>
+        </side>
     </body>
 </html>

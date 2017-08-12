@@ -63,24 +63,55 @@ input.error {
     background: #c9f;
 }
 
-#block-table {
+#key-table {
     margin-left: 1em;
     border-collapse: collapse;
 }
 
-#block-table td {
+#key-table td {
     box-sizing: border-box;
     height: 1.5em;
     width: 1.5em;
     text-align: center;
-    font-family: monospace;
     font-size: 1em;
     padding: 0;
-    line-height: 0;
     border: 1px dotted #966;
 }
 
-#block-table td > img {
+#key-table td:not(.no-mono) {
+    line-height: 0;
+    font-family: monospace;
+}
+
+#key-table td > img {
     height: 1.5em;
     width: 1.5em;
+}
+
+#key-modal {
+    z-index: 100;
+    position: absolute;
+    top: 10vh;
+    left: 10vw;
+    box-sizing: border-box;
+    height: 80vh;
+    width: 80vw;
+    padding: 5px;
+    background-color: rgba(51, 51, 51, 0.9);
+    color: white;
+    overflow-y: scroll;
+    display: none;
+}
+
+#key-modal h2 {
+    margin: 0.25em 0;
+}
+
+#key-map i {
+    background: #ffc;
+    color: #900;
+    font-family: monospace;
+    font-style: normal;
+    padding: 1px;
+    border: 2px outset #993;
 }
