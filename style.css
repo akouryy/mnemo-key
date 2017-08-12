@@ -59,6 +59,10 @@ input.error {
     background: #f99;
 }
 
+#board td.selection:not(.focus) {
+    background: #c9f;
+}
+
 #block-table {
     margin-left: 1em;
     border-collapse: collapse;

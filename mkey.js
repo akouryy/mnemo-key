@@ -121,6 +121,7 @@ jQuery($ => {
     let board$Td = null;
     let board = null;
     let boardX = 0, boardY = 0;
+    let selectionStart = null;
 
     for(const s of Stages) {
         $selectStage.append($(`<option value=${s.name}>${s.title}</option>`));
@@ -228,33 +229,57 @@ jQuery($ => {
             }
         }
 
-        boardX = Math.floor(board.width / 2);
-        boardY = 0;
+        selectionStart = [boardX, boardY] = [Math.floor(board.width / 2), 0];
         focusedBlock$Td().addClass('focus');
     }
 
     function focusedBlock() { return board[boardY][boardX]; }
     function focusedBlock$Td() { return board$Td[boardY][boardX]; }
 
-    function changeBlockFocus(x, y) {
+    function selectionCoordinates() {
+        let [x1, y1] = selectionStart, x2 = boardX, y2 = boardY;
+        if(x1 > x2) [x1, x2] = [x2, x1];
+        if(y1 > y2) [y1, y2] = [y2, y1];
+        return [x1, y1, x2, y2];
+    }
+    function forEachSelection(rowFn = null, cellFn) {
+        const [x1, y1, x2, y2] = selectionCoordinates();
+        for(let y = y1; y <= y2; y++) {
+            if(rowFn) rowFn(y);
+            for(let x = x1; x <= x2; x++) {
+                cellFn(x, y);
+            }
+        }
+    }
+
+    function changeBlockFocus(shiftKey, x, y) {
         if(!board) return;
-        focusedBlock$Td().removeClass('focus');
+
+        if(shiftKey && selectionStart === null) {
+            selectionStart = [boardX, boardY];
+        }
 
         boardX = x;
         boardY = y;
-
         if(boardX < 0)             boardX = board.width - 1;
         if(boardX >= board.width)  boardX = 0;
         if(boardY < 0)             boardY = board.height - 1;
         if(boardY >= board.height) boardY = 0;
 
+        if(!shiftKey) {
+            selectionStart = [boardX, boardY];
+        }
+
+        $board.find('td').removeClass('focus').removeClass('selection');
         focusedBlock$Td().addClass('focus');
+        forEachSelection((x, y) => board$Td[y][x].addClass('selection'));
     }
 
-    function updateBlock({x = boardX, y = boardY, type = -1, rotate = -1}) {
-        let oldRotate = board[y][x].rotate;
+    function updateBlock({x = boardX, y = boardY, type = -1, rotateDiff = 0}) {
         if(type   === -1) type   = board[y][x].type;
-        if(rotate === -1) rotate = type && Blocks[type].rotatable ? oldRotate : 0;
+
+        const oldRotate = board[y][x].rotate;
+        const rotate = type && Blocks[type].rotatable ? (oldRotate + rotateDiff + 4) % 4 : 0;
 
         board[y][x] = {type: type, rotate: rotate};
 
@@ -268,29 +293,35 @@ jQuery($ => {
         }
     }
 
+    function updateBlockSelection({type = -1, rotateDiff = 0}) {
+        forEachSelection((x, y) => updateBlock({x: x, y: y, type: type, rotateDiff: rotateDiff}));
+    }
+
     $(document).keydown($board, e => {
         switch(e.keyCode) {
         case 37: case 38: case 39: case 40: // ←↑→↓
-            changeBlockFocus(boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
+            changeBlockFocus(e.shiftKey, boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
             return false;
 
         case 33: // PageUp
-            changeBlockFocus(boardX, 0); return false;    
+            changeBlockFocus(e.shiftKey, boardX, 0); return false;
         case 34: // PageDown
-            changeBlockFocus(boardX, -1); return false;    
+            changeBlockFocus(e.shiftKey, boardX, -1); return false;
         case 35: // Home
-            changeBlockFocus(-1, boardY); return false;    
+            changeBlockFocus(e.shiftKey, -1, boardY); return false;
         case 36: // End
-            changeBlockFocus(0, boardY); return false;    
+            changeBlockFocus(e.shiftKey, 0, boardY); return false;
 
         case 32: // space
-            if(focusedBlock().type && Blocks[focusedBlock().type].rotatable) {
-                updateBlock({rotate: (focusedBlock().rotate + 1) % 4})
+            if(e.shiftKey) {
+                updateBlockSelection({rotateDiff: -1});
+            } else {
+                updateBlockSelection({rotateDiff: +1});
             }
             return false;
 
         case 8: case 46: // backspace, delete
-            updateBlock({type: null});
+            updateBlockSelection({type: null});
             return false;
         }
     });
@@ -302,7 +333,7 @@ jQuery($ => {
             if(!m) return;
             const b = m[focusedBlock().type] || m.default;
             if(b) {
-                updateBlock({type: b});
+                updateBlockSelection({type: b});
                 return false;
             }
         }
