@@ -31,7 +31,7 @@ function setBlockRawKey(type) {
 }
 for(const type in Blocks) setBlockRawKey(type);
 
-BlockKeyMap = {};
+const BlockKeyMap = {};
 for(const type in Blocks) {
     const block = Blocks[type];
     const preceding = block.preceding || 'default';
@@ -40,7 +40,6 @@ for(const type in Blocks) {
     }
     BlockKeyMap[block.key][preceding] = type;
 }
-console.log(BlockKeyMap);
 
 
 /**
@@ -122,6 +121,7 @@ jQuery($ => {
     let board = null;
     let boardX = 0, boardY = 0;
     let selectionStart = null;
+    let clipBoard = [];
 
     for(const s of Stages) {
         $selectStage.append($(`<option value=${s.name}>${s.title}</option>`));
@@ -242,10 +242,18 @@ jQuery($ => {
         if(y1 > y2) [y1, y2] = [y2, y1];
         return [x1, y1, x2, y2];
     }
-    function forEachSelection(rowFn = null, cellFn) {
+    function forEachSelection(fn1, fn2 = null) {
+        let rowFn, cellFn;
+        if(fn2 === null) {
+            rowFn = () => {};
+            cellFn = fn1;
+        } else {
+            rowFn = fn1;
+            cellFn = fn2;
+        }
         const [x1, y1, x2, y2] = selectionCoordinates();
         for(let y = y1; y <= y2; y++) {
-            if(rowFn) rowFn(y);
+            rowFn(y);
             for(let x = x1; x <= x2; x++) {
                 cellFn(x, y);
             }
@@ -275,11 +283,13 @@ jQuery($ => {
         forEachSelection((x, y) => board$Td[y][x].addClass('selection'));
     }
 
-    function updateBlock({x = boardX, y = boardY, type = -1, rotateDiff = 0}) {
-        if(type   === -1) type   = board[y][x].type;
+    function updateBlock({x = boardX, y = boardY, type = -1, rotate = -1, rotateDiff = 0}) {
+        if(type === -1) type = board[y][x].type;
 
         const oldRotate = board[y][x].rotate;
-        const rotate = type && Blocks[type].rotatable ? (oldRotate + rotateDiff + 4) % 4 : 0;
+        if(rotate === -1) {
+            rotate = type && Blocks[type].rotatable ? (oldRotate + rotateDiff + 4) % 4 : 0;
+        }
 
         board[y][x] = {type: type, rotate: rotate};
 
@@ -298,6 +308,9 @@ jQuery($ => {
     }
 
     $(document).keydown($board, e => {
+        const target = e.target.tagName.toLowerCase();
+        if(['form', 'input', 'select', 'option', 'button'].includes(target)) return;
+
         switch(e.keyCode) {
         case 37: case 38: case 39: case 40: // ←↑→↓
             changeBlockFocus(e.shiftKey, boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
@@ -323,6 +336,39 @@ jQuery($ => {
         case 8: case 46: // backspace, delete
             updateBlockSelection({type: null});
             return false;
+
+        case 67: case 88: // cx
+            if(e.ctrlKey) {
+                const data = [];
+                const [x1, y1, x2, y2] = selectionCoordinates();
+                forEachSelection(y => data.push([]), (x, y) => {
+                    data[y - y1].push(board[y][x]);
+                });
+                if(e.which == 88) updateBlockSelection({type: null});
+                clipBoard.push({
+                    stageName: board.stageName,
+                    timestamp: Date.now(),
+                    width: x2 - x1 + 1,
+                    height: y2 - y1 + 1,
+                    boardData: data,
+                });
+                return false;
+            }
+
+        case 86: // v
+            if(e.ctrlKey) {
+                const clip = clipBoard[clipBoard.length - 1], data = clip.boardData;
+                const [x, y] = selectionStart = [
+                    Math.min(boardX + clip.width - 1, board.width - 1),
+                    Math.min(boardY + clip.height - 1, board.height - 1)
+                ];
+                forEachSelection((x, y) => {
+                    const c = data[y - boardY][x - boardX];
+                    updateBlock({x: x, y: y, type: c.type, rotate: c.rotate});
+                });
+                changeBlockFocus(true, boardX, boardY);
+                return false;
+            }
         }
     });
 
