@@ -157,15 +157,13 @@ jQuery($ => {
     });
     fn();
 
-    function _Imp_updateSaveList($list, data, showDataCond, showStageName) {
+    function _Imp_updateSaveList($list, data, showDataCond, additionalHTML) {
         $list.html('');
         for(const d of data) {
             if(showDataCond(d)) {
                 const $li = $('<li>');
-                $li.html(
-                    (showStageName ? d.stageName + '<br/>' : '') +
-                    new Date(d.timestamp).toLocaleString() + ` [${d.boardData.length}]`
-                );
+                $li.text(new Date(d.timestamp).toLocaleString() + ` [${d.boardData.length}]`);
+                additionalHTML(d, $li);
                 $li.click(() => {
                     $saveList.children().removeClass('focus');
                     $newSaveList.children().removeClass('focus');
@@ -178,10 +176,24 @@ jQuery($ => {
     }
 
     function updateSaveList() {
-        _Imp_updateSaveList($saveList, boardData, d => d.stageName == stage.name, false);
+        _Imp_updateSaveList($saveList, boardData, d => d.stageName == stage.name, () => {});
     }
     function updateNewSaveList() {
-        _Imp_updateSaveList($newSaveList, newData, _ => true /*show all*/, true);
+        _Imp_updateSaveList($newSaveList, newData, _ => true /*show all*/, (d, $li) => {
+            $li.html($li.html() + '<br/>' + d.stageName);
+            const $span = $('<span>').text('[delete]').addClass('delete');
+            $span.click(e => {
+                $li.click();
+                if(confirm('本当に削除しますか?')) {
+                    newData = newData.filter(x => x !== d);
+                    $newBoardData.val(JSON.stringify(boardData.concat(newData)));
+                    $li.remove();
+                    $span.off('click');
+                    return false;
+                }
+            });
+            $li.append($span);
+        });
     }
 
     $boardData.change(fn = () => {
@@ -337,94 +349,96 @@ jQuery($ => {
         );
     }
 
-    $(document).keydown($board, e => {
+    $(document).keydown(e => {
         const target = e.target.tagName.toLowerCase();
         if(['form', 'input', 'select', 'option', 'button'].includes(target)) return;
         if($keyModal.is(':visible')) {
             return keydownOnKeyModal(e);
         }
 
-        switch(e.keyCode) {
-        case 37: case 38: case 39: case 40: // ←↑→↓
-            changeBlockFocus(e.shiftKey, boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
-            return false;
+        if($board.is(':focus')) {
+            switch(e.keyCode) {
+            case 37: case 38: case 39: case 40: // ←↑→↓
+                changeBlockFocus(e.shiftKey, boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
+                return false;
 
-        case 33: // PageUp
-            changeBlockFocus(e.shiftKey, boardX, 0); return false;
-        case 34: // PageDown
-            changeBlockFocus(e.shiftKey, boardX, -1); return false;
-        case 35: // Home
-            changeBlockFocus(e.shiftKey, -1, boardY); return false;
-        case 36: // End
-            changeBlockFocus(e.shiftKey, 0, boardY); return false;
+            case 33: // PageUp
+                changeBlockFocus(e.shiftKey, boardX, 0); return false;
+            case 34: // PageDown
+                changeBlockFocus(e.shiftKey, boardX, -1); return false;
+            case 35: // Home
+                changeBlockFocus(e.shiftKey, -1, boardY); return false;
+            case 36: // End
+                changeBlockFocus(e.shiftKey, 0, boardY); return false;
 
-        case 32: // space
-            if(e.ctrlKey) {
-                updateBlockSelection({rotate: 0});
-            } else {
-                if(e.shiftKey) {
-                    updateBlockSelection({rotateDiff: -1});
+            case 32: // space
+                if(e.ctrlKey) {
+                    updateBlockSelection({rotate: 0});
                 } else {
-                    updateBlockSelection({rotateDiff: +1});
+                    if(e.shiftKey) {
+                        updateBlockSelection({rotateDiff: -1});
+                    } else {
+                        updateBlockSelection({rotateDiff: +1});
+                    }
                 }
-            }
-            return false;
-
-        case 8: case 46: // backspace, delete
-            updateBlockSelection({type: null});
-            return false;
-
-        case 65: // a
-            if(e.ctrlKey) {
-                selectionStart = [0, 0];
-                changeBlockFocus(true, -1, -1);
                 return false;
-            }
 
-        case 67: case 88: // cx
-            if(e.ctrlKey) {
-                const data = [];
-                const [x1, y1, x2, y2] = selectionCoordinates();
-                forEachSelection(y => data.push([]), (x, y) => {
-                    data[y - y1].push(board[y][x]);
-                });
-                if(e.which == 88) updateBlockSelection({type: null});
-                clipBoard.push({
-                    stageName: board.stageName,
-                    timestamp: Date.now(),
-                    width: x2 - x1 + 1,
-                    height: y2 - y1 + 1,
-                    boardData: data,
-                });
+            case 8: case 46: // backspace, delete
+                updateBlockSelection({type: null});
                 return false;
-            }
 
-        case 86: // v
-            if(e.ctrlKey) {
-                const clip = clipBoard[clipBoard.length - 1], data = clip.boardData;
-                const [x, y] = selectionStart = [
-                    Math.min(boardX + clip.width - 1, board.width - 1),
-                    Math.min(boardY + clip.height - 1, board.height - 1)
-                ];
-                forEachSelection((x, y) => {
-                    const c = data[y - boardY][x - boardX];
-                    updateBlock({x: x, y: y, type: c.type, rotate: c.rotate});
-                });
-                changeBlockFocus(true, boardX, boardY);
-                return false;
-            }
+            case 65: // a
+                if(e.ctrlKey) {
+                    selectionStart = [0, 0];
+                    changeBlockFocus(true, -1, -1);
+                    return false;
+                }
 
-        case 83: // s
-            if(e.ctrlKey) {
-                saveNew();
-                return false;
-            }
+            case 67: case 88: // cx
+                if(e.ctrlKey) {
+                    const data = [];
+                    const [x1, y1, x2, y2] = selectionCoordinates();
+                    forEachSelection(y => data.push([]), (x, y) => {
+                        data[y - y1].push(board[y][x]);
+                    });
+                    if(e.which == 88) updateBlockSelection({type: null});
+                    clipBoard.push({
+                        stageName: board.stageName,
+                        timestamp: Date.now(),
+                        width: x2 - x1 + 1,
+                        height: y2 - y1 + 1,
+                        boardData: data,
+                    });
+                    return false;
+                }
 
-        case 191: // /?
-            if(e.shiftKey) {
-                $keyModal.show(300);
-                $keyModal.focus();
-                return false;
+            case 86: // v
+                if(e.ctrlKey) {
+                    const clip = clipBoard[clipBoard.length - 1], data = clip.boardData;
+                    const [x, y] = selectionStart = [
+                        Math.min(boardX + clip.width - 1, board.width - 1),
+                        Math.min(boardY + clip.height - 1, board.height - 1)
+                    ];
+                    forEachSelection((x, y) => {
+                        const c = data[y - boardY][x - boardX];
+                        updateBlock({x: x, y: y, type: c.type, rotate: c.rotate});
+                    });
+                    changeBlockFocus(true, boardX, boardY);
+                    return false;
+                }
+
+            case 83: // s
+                if(e.ctrlKey) {
+                    saveNew();
+                    return false;
+                }
+
+            case 191: // /?
+                if(e.shiftKey) {
+                    $keyModal.show(300);
+                    $keyModal.focus();
+                    return false;
+                }
             }
         }
     });
@@ -437,13 +451,15 @@ jQuery($ => {
         }
 
         if(!e.ctrlKey) {
-            const c = String.fromCharCode(e.which).toLowerCase();
-            const m = BlockKeyMap[c];
-            if(!m) return;
-            const b = m[focusedBlock().type] || m.default;
-            if(b) {
-                updateBlockSelection({type: b});
-                return false;
+            if($board.is(':focus')) {
+                const c = String.fromCharCode(e.which).toLowerCase();
+                const m = BlockKeyMap[c];
+                if(!m) return;
+                const b = m[focusedBlock().type] || m.default;
+                if(b) {
+                    updateBlockSelection({type: b});
+                    return false;
+                }
             }
         }
     });

@@ -19,6 +19,11 @@ input.error {
     color: #060;
 }
 
+#new-save-list > li > .delete {
+    color: #f00;
+    padding-left: 1em;
+}
+
 #save-list > li.focus,
 #new-save-list > li.focus {
     color: #600;
