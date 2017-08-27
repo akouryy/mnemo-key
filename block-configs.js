@@ -1,10 +1,9 @@
 /**
  * FORKED FROM https://github.com/tsg-ut/mnemo/blob/master/lib/block-configs.js (MIT LICENSE)
  */
+'use strict';
 
-//const util = require('./util');
-
-Blocks = {
+const Blocks = {
     empty: {
         type: 'empty',
         io: {},
@@ -610,3 +609,21 @@ Blocks = {
         key: '^', preceding: 'bitwise-xor',
     },
 };
+
+const BlockTable = [
+    ['wireI', 'wireL', 'wireT', 'wireX'],
+    ['wireXdot', 'junctionR', 'junctionL', 'junctionT'],
+    ['add','plus-1','plus-2','add-3'],
+    ['sub','minus-1','minus-2'],
+    ['mul','times-2','times-3','times-10'],
+    ['div','div-2','div-3','div-10'],
+    ['mod','sqrt'],
+    ['pow','log','log2','log10'],
+    ['const-0','const-1','const-2','const-3'],
+    ['const-10','bitwise-and','bitwise-or','bitwise-xor'],
+    ['bitshift-left','bitshift-right','equal','neq'],
+    ['gt','geqq','lt','leqq'],
+    ['and','nand','or','nor'],
+    ['xor','not'],
+    ['conditional','diode','c-contact','transistor']
+];

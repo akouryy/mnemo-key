@@ -1,22 +1,5 @@
 //const Blocks = require('./block-configs.js');
-
-const BlockTable = [
-    ['wireI', 'wireL', 'wireT', 'wireX'],
-    ['wireXdot', 'junctionR', 'junctionL', 'junctionT'],
-    ['add','plus-1','plus-2','add-3'],
-    ['sub','minus-1','minus-2'],
-    ['mul','times-2','times-3','times-10'],
-    ['div','div-2','div-3','div-10'],
-    ['mod','sqrt'],
-    ['pow','log','log2','log10'],
-    ['const-0','const-1','const-2','const-3'],
-    ['const-10','bitwise-and','bitwise-or','bitwise-xor'],
-    ['bitshift-left','bitshift-right','equal','neq'],
-    ['gt','geqq','lt','leqq'],
-    ['and','nand','or','nor'],
-    ['xor','not'],
-    ['conditional','diode','c-contact','transistor']
-];
+'use strict';
 
 function setBlockRawKey(type) {
     if(type === 'empty') return;
@@ -40,65 +23,6 @@ for(const type in Blocks) {
     }
     BlockKeyMap[block.key][preceding] = type;
 }
-
-
-/**
- * STAGE DATA: FROM https://github.com/tsg-ut/mnemo/tree/master/stages (MIT LICENSE)
- */
-
-const Stages = [
-    {name:"wire01",              width:3,  height:3,  title:"練習"},
-    {name:"calc01",              width:3,  height:3,  title:"四則演算 -基本- 1"},
-    {name:"calc02",              width:5,  height:5,  title:"四則演算 -基本- 2"},
-    {name:"calc03",              width:5,  height:5,  title:"四則演算 -基本- 3"},
-    {name:"calc04",              width:5,  height:5,  title:"四則演算 -基本- 4"},
-    {name:"calc05",              width:5,  height:5,  title:"四則演算 -基本- 5"},
-    {name:"calc06",              width:3,  height:2,  title:"四則演算 -基本- 6"},
-    {name:"make-minus-one-easy", width:5,  height:5,  title:"-1を作ろう -easy-"},
-    {name:"division-easy",       width:5,  height:5,  title:"割り算 -easy-"},
-    {name:"sixth-power",         width:5,  height:5,  title:"6乗"},
-    {name:"remainder",           width:5,  height:10, title:"余りの計算"},
-    {name:"plus-32",             width:5,  height:8,  title:"32を足してみよう"},
-    {name:"conditional01",       width:9,  height:7,  title:"条件分岐 -基本- 1"},
-    {name:"conditional02",       width:11, height:11, title:"条件分岐 -基本- 2"},
-    {name:"conditional03",       width:9,  height:9,  title:"条件分岐 -基本- 3"},
-    {name:"factorial",           width:13, height:13, title:"階乗"},
-    {name:"parity",              width:19, height:19, title:"パリティ"},
-    {name:"fibonacci",           width:11, height:11, title:"フィボナッチ数"},
-    {name:"bivariation01",       width:5,  height:5,  title:"2変数 -基本-"},
-    {name:"power-easy",          width:9,  height:9,  title:"累乗 -easy-"},
-    {name:"power-hard",          width:15, height:15, title:"累乗 -hard-"},
-    {name:"division-hard",       width:5,  height:5,  title:"割り算 -hard-"},
-    {name:"gcd",                 width:13, height:13, title:"最大公約数"},
-    {name:"lcm",                 width:11, height:11, title:"最小公倍数"},
-    {name:"make-minus-one-med",  width:5,  height:10, title:"-1を作ろう -med-"},
-    {name:"make-minus-one-hard", width:7,  height:9,  title:"-1を作ろう -hard-"},
-    {name:"sqrt-easy",           width:9,  height:9,  title:"平方根 -easy-"},
-    {name:"sqrt-hard",           width:15, height:15, title:"平方根 -hard-"},
-    {name:"complement-of-2",     width:7,  height:7,  title:"2の補数"},
-    {name:"binarian-easy",       width:15, height:15, title:"バイナリアン -easy-"},
-    {name:"perfect-number",      width:5,  height:5,  title:"完全数"},
-    {name:"reversal",            width:15, height:15, title:"反転"},
-    {name:"msd",                 width:15, height:15, title:"最上位の桁"},
-    {name:"mod3-hard",           width:19, height:19, title:"mod3 -hard-"},
-    {name:"seq01",               width:11, height:11, title:"配列 -基本- 1"},
-    {name:"seq02",               width:11, height:11, title:"配列 -基本- 2"},
-    {name:"max",                 width:11, height:11, title:"最大値"},
-    {name:"the-fifth-max",       width:31, height:31, title:"中央値"},
-    {name:"100",                 width:9,  height:8,  title:"100"},
-    {name:"100-again",           width:5,  height:5,  title:"100再び"},
-    {name:"1000",                width:5,  height:5,  title:"1000"},
-    {name:"plus-32-hard",        width:3,  height:6,  title:"32を足してみよう-hard-"},
-    {name:"xor",                 width:5,  height:5,  title:"XOR"},
-    {name:"2017",                width:9,  height:9,  title:"2017"},
-    {name:"repeat-self",         width:9,  height:9,  title:"自己反復"},
-    {name:"fibonacci-hard",      width:13, height:13, title:"フィボナッチ数 -hard-"},
-    {name:"factorization",       width:11, height:11, title:"因数分解"},
-    {name:"spaceship",           width:7,  height:7,  title:"宇宙船"},
-    {name:"addition-med",        width:7,  height:7,  title:"足し算 -med-"},
-    {name:"10000th-digit",       width:13, height:13, title:"10000桁目"},
-    {name:"8809",                width:13, height:13, title:"8809=6"},
-];
 
 
 const dx = [-1, 0, 1, 0], dy = [0, -1, 0, 1];
