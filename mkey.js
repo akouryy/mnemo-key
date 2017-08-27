@@ -27,6 +27,35 @@ for(const type in Blocks) {
 
 const dx = [-1, 0, 1, 0], dy = [0, -1, 0, 1];
 
+class Layer {
+    constructor(height, width) {
+        this.width = width;
+        this.height = height;
+        this.data = Yun.Arrays.new_repeat(
+            height, width, Object.freeze({type: null, rotate: 0})
+        );
+        Object.freeze(this.data);
+    }
+
+    updateBlock(y, x, {type = this.data[y][x].type, rotate = -1, rotateDiff = 0}) {
+        if(rotate !== -1 && rotateDiff !== 0) throw new Yun.ArgumentError(
+            "Layer#updateBlock(y, x, {type?, rotate|rotateDiff?}): " +
+            "called with both rotate and rotateDiff specified."
+        );
+
+        const before = this.data[y][x];
+
+        if(rotate === -1) {
+            console.log(x,y,before,type);
+            rotate = type && Blocks[type].rotatable ? (before.rotate + rotateDiff + 4) % 4 : 0;
+        }
+
+        this.data[y][x] = Object.freeze({type: type, rotate: rotate});
+
+        return {before: before, after: this.data[y][x]};
+    }
+}
+
 
 jQuery($ => {
     const $selectStage  = $('select[name=stage]');
@@ -138,8 +167,8 @@ jQuery($ => {
         const data = [];
         for(let y = 0; y < board.height; y++) {
             for(let x = 0; x < board.width; x++) {
-                if(board[y][x].type !== null) {
-                    data.push({x: x, y: y, type: board[y][x].type, rotate: board[y][x].rotate});
+                if(board.layer.data[y][x].type !== null) {
+                    data.push({x: x, y: y, type: board.layer.data[y][x].type, rotate: board.layer.data[y][x].rotate});
                 }
             }
         }
@@ -152,23 +181,19 @@ jQuery($ => {
     function initBoard(data) {
         $newSave.prop('disabled', false);
 
-        board = [];
-        for(let i = 0; i < stage.height; i++) {
-            board.push([]);
-            for(let j = 0; j < stage.width; j++) {
-                board[i].push({type: null, rotate: 0});
-            }
-        }
+        board = {
+            height: stage.height,
+            width: stage.width,
+            stageName: stage.name,
+        };
+        board.layer = new Layer(board.height, board.width);
         for(const d of data.boardData) {
-            board[d.y][d.x] = {type: d.type, rotate: d.rotate};
+            board.layer.updateBlock(d.y, d.x, {type: d.type, rotate: d.rotate});
         }
-        board.width  = stage.width;
-        board.height = stage.height;
-        board.stageName = stage.name;
 
         $board.html('');
         board$Td = [];
-        for(const [y, row] of board.entries()) {
+        for(const [y, row] of board.layer.data.entries()) {
             const $tr = $('<tr>').appendTo($board);
             const row$Td = [];
             board$Td.push(row$Td);
@@ -197,7 +222,7 @@ jQuery($ => {
         focusedBlock$Td().addClass('focus');
     }
 
-    function focusedBlock() { return board[boardY][boardX]; }
+    function focusedBlock() { return board.layer.data[boardY][boardX]; }
     function focusedBlock$Td() { return board$Td[boardY][boardX]; }
 
     function selectionCoordinates() {
@@ -247,27 +272,20 @@ jQuery($ => {
         forEachSelection((x, y) => board$Td[y][x].addClass('selection'));
     }
 
-    function updateBlock({x = boardX, y = boardY, type = -1, rotate = -1, rotateDiff = 0}) {
-        if(type === -1) type = board[y][x].type;
-
-        const oldRotate = board[y][x].rotate;
-        if(rotate === -1) {
-            rotate = type && Blocks[type].rotatable ? (oldRotate + rotateDiff + 4) % 4 : 0;
-        }
-
-        board[y][x] = {type: type, rotate: rotate};
+    function updateBlock({x = boardX, y = boardY, type, rotate, rotateDiff}) {
+        const d = board.layer.updateBlock(y, x, {type: type, rotate: rotate, rotateDiff: rotateDiff});
 
         const $td = board$Td[y][x];
         $td.html('');
-        $td.removeClass(`rotate-${oldRotate}`);
-        $td.addClass(`rotate-${rotate}`);
-        if(type !== null) {
+        $td.removeClass(`rotate-${d.before.rotate}`);
+        $td.addClass(`rotate-${d.after.rotate}`);
+        if(d.after.type !== null) {
             const $img = $('<img>').appendTo($td);
-            $img.attr('src', `https://mnemo.pro/image/${type}.png`);
+            $img.attr('src', `https://mnemo.pro/image/${d.after.type}.png`);
         }
     }
 
-    function updateBlockSelection({type = -1, rotate = -1, rotateDiff = 0}) {
+    function updateBlockSelection({type, rotate, rotateDiff}) {
         forEachSelection((x, y) =>
             updateBlock({x: x, y: y, type: type, rotate: rotate, rotateDiff: rotateDiff})
         );
@@ -323,7 +341,7 @@ jQuery($ => {
                     const data = [];
                     const [x1, y1, x2, y2] = selectionCoordinates();
                     forEachSelection(y => data.push([]), (x, y) => {
-                        data[y - y1].push(board[y][x]);
+                        data[y - y1].push(board.layer.data[y][x]);
                     });
                     if(e.which == 88) updateBlockSelection({type: null});
                     clipBoard.push({
