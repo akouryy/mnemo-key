@@ -51,3 +51,38 @@ Yun.Array = class YunArray extends G.Array {
         return g;
     }
 };
+
+Yun.Maybe = class Maybe {
+    static new_u(val) { return val !== void 0 ? Yun.Some(val) : Yun.None; }
+    static new_un(val) { return val !== void 0 && val !== null ? Yun.Some(val) : Yun.None; }
+    static new_f(val) { return val ? Yun.Some(val) : Yun.None; }
+    static new_if(cond, val) { return cond ? Yun.Some(val) : Yun.None; }
+    static new_if_fn(cond, fn) { return cond ? Yun.Some(fn()) : Yun.None; }
+
+    constructor(some, val) { this.some = some; if(some) this.val = val; }
+
+    *[Symbol.iterator]() { if(this.some) yield this.val; }
+
+    forEach(f) { if(this.some) f(this.val); }
+
+    map(f) { return this.some ? Yun.Some(f(this.val)) : Yun.None; }
+
+    flat_map(f) { return this.some ? f(this.val) : Yun.None; }
+
+    filter(f) { return this.some && f(this.val) ? this : Yun.None; }
+
+    fold   (if_none, f) { return this.some ? f(this.val) : if_none; }
+    fold_fn(if_none, f) { return this.some ? f(this.val) : if_none(); }
+
+    get_bang() {
+        if(this.some) return this.value;
+        throw new Yun.ArgumentError('Yun.Maybe.get!(): this is None.');
+    }
+
+    get_or   (if_none) { return this.some ? this.val : if_none; }
+    get_or_fn(if_none) { return this.some ? this.val : if_none(); }
+};
+
+Yun.None = new Yun.Maybe(false);
+
+Yun.Some = (val) => new Yun.Maybe(true, val);

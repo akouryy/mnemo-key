@@ -32,7 +32,7 @@ class Layer {
         this.height = height;
         this.width = width;
         this.data = Yun.Array.new_repeat(
-            height, width, Object.freeze({type: null, rotate: 0})
+            height, width, Object.freeze({type: Yun.None, rotate: 0})
         );
         Object.freeze(this.data);
     }
@@ -46,7 +46,8 @@ class Layer {
         const before = this.data[y][x];
 
         if(rotate === -1) {
-            rotate = type && Blocks[type].rotatable ? (before.rotate + rotateDiff + 4) % 4 : 0;
+            rotate = type.filter(t => Blocks[t].rotatable)
+                         .fold(0, _ =>(before.rotate + rotateDiff + 4) % 4);
         }
 
         this.data[y][x] = Object.freeze({type: type, rotate: rotate});
@@ -56,14 +57,14 @@ class Layer {
 
     fromBoardData(save) {
         for(const b of save) {
-            this.updateBlock(b.y, b.x, {type: b.type, rotate: b.rotate});
+            this.updateBlock(b.y, b.x, {type: Yun.Some(b.type), rotate: b.rotate});
         }
         return this;
     }
 
     toBoardData() {
         return this.data.flat_map((dy, y) => dy.flat_map((d, x) =>
-            d.type !== null ? [{x: x, y: y, type: d.type, rotate: d.rotate}] : []
+            d.type.fold([], t => [{x: x, y: y, type: t, rotate: d.rotate}])
         ));
     }
 }
@@ -83,10 +84,8 @@ jQuery($ => {
     const $keyModal     = $('#key-modal');
     let stage = Stages[0];
     let boardData = [], newData = [];
-    let board$Td = null;
-    let board = null;
+    let board$Td, board, selectionStart; // initialized in initBoard().
     let boardX = 0, boardY = 0;
-    let selectionStart = null;
     let clipBoard = [];
 
     for(const s of Stages) {
@@ -175,7 +174,6 @@ jQuery($ => {
     $newSave.click(saveNew);
 
     function saveNew() {
-        if(!board) return;
         newData.push({
             stageName: board.stageName,
             timestamp: Date.now(),
@@ -208,9 +206,9 @@ jQuery($ => {
                 const $td = $('<td>').appendTo($tr);
                 $td.addClass(`rotate-${cell.rotate}`);
                 row$Td.push($td);
-                if(cell.type !== null) {
+                for(const t of cell.type) {
                     const $img = $('<img>').appendTo($td);
-                    $img.attr('src', `https://mnemo.pro/image/${cell.type}.png`);
+                    $img.attr('src', `https://mnemo.pro/image/${t}.png`);
                 }
 
                 $td.click(e => {
@@ -237,9 +235,9 @@ jQuery($ => {
         if(y1 > y2) [y1, y2] = [y2, y1];
         return [x1, y1, x2, y2];
     }
-    function forEachSelection(fn1, fn2 = null) {
+    function forEachSelection(fn1, fn2) {
         let rowFn, cellFn;
-        if(fn2 === null) {
+        if(fn2 === void 0) {
             rowFn = () => {};
             cellFn = fn1;
         } else {
@@ -256,12 +254,6 @@ jQuery($ => {
     }
 
     function changeBlockFocus(shiftKey, x, y) {
-        if(!board) return;
-
-        if(shiftKey && selectionStart === null) {
-            selectionStart = [boardX, boardY];
-        }
-
         boardX = x;
         boardY = y;
         if(boardX < 0)             boardX = board.width - 1;
@@ -285,9 +277,9 @@ jQuery($ => {
         $td.html('');
         $td.removeClass(`rotate-${d.before.rotate}`);
         $td.addClass(`rotate-${d.after.rotate}`);
-        if(d.after.type !== null) {
+        for(const t of d.after.type) {
             const $img = $('<img>').appendTo($td);
-            $img.attr('src', `https://mnemo.pro/image/${d.after.type}.png`);
+            $img.attr('src', `https://mnemo.pro/image/${t}.png`);
         }
     }
 
@@ -332,7 +324,7 @@ jQuery($ => {
                 return false;
 
             case 8: case 46: // backspace, delete
-                updateBlockSelection({type: null});
+                updateBlockSelection({type: Yun.None});
                 return false;
 
             case 65: // a
@@ -349,7 +341,7 @@ jQuery($ => {
                     forEachSelection(y => data.push([]), (x, y) => {
                         data[y - y1].push(board.layer.data[y][x]);
                     });
-                    if(e.which == 88) updateBlockSelection({type: null});
+                    if(e.which == 88) updateBlockSelection({type: Yun.None});
                     clipBoard.push({
                         stageName: board.stageName,
                         timestamp: Date.now(),
@@ -403,9 +395,10 @@ jQuery($ => {
                 const c = String.fromCharCode(e.which).toLowerCase();
                 const m = BlockKeyMap[c];
                 if(!m) return;
-                const b = m[focusedBlock().type] || m.default;
+                const b = focusedBlock().type.flat_map(t => Yun.Maybe.new_u(m[t]))
+                                             .get_or(m.default);
                 if(b) {
-                    updateBlockSelection({type: b});
+                    updateBlockSelection({type: Yun.Some(b)});
                     return false;
                 }
             }
