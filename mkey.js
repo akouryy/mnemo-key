@@ -31,7 +31,7 @@ class Layer {
     constructor(height, width) {
         this.height = height;
         this.width = width;
-        this.data = Yun.Arrays.new_repeat(
+        this.data = Yun.Array.new_repeat(
             height, width, Object.freeze({type: null, rotate: 0})
         );
         Object.freeze(this.data);
@@ -62,15 +62,9 @@ class Layer {
     }
 
     toBoardData() {
-        const bd = [];
-        for(let y = 0; y < this.height; y++) {
-            for(let x = 0; x < this.width; x++) {
-                if(this.data[y][x].type !== null) {
-                    bd.push({x: x, y: y, type: this.data[y][x].type, rotate: this.data[y][x].rotate});
-                }
-            }
-        }
-        return bd;
+        return this.data.flat_map((dy, y) => dy.flat_map((d, x) =>
+            d.type !== null ? [{x: x, y: y, type: d.type, rotate: d.rotate}] : []
+        ));
     }
 }
 
