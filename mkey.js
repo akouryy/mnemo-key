@@ -55,7 +55,6 @@ class Layer {
 
         const change = {before: before, after: this.data[y][x]};
         this.blockUpdated(y, x, change);
-        console.log(y, x, change);
         return change;
     }
 
@@ -376,9 +375,65 @@ jQuery($ => {
         if(commandIndex < commandHistory.length - 1) {
             commandIndex += 1;
             commandHistory[commandIndex].exec();
-            console.log(commandHistory[commandIndex]);
         }
     }
+
+    function copy() {
+        const data = [];
+        const [x1, y1, x2, y2] = selectionCoordinates();
+        forEachSelection(y => data.push([]), (x, y) => {
+            data[y - y1].push(board.layer.data[y][x]);
+        });
+        clipBoard.push({
+            stageName: board.stageName,
+            timestamp: Date.now(),
+            width: x2 - x1 + 1,
+            height: y2 - y1 + 1,
+            boardData: data,
+        });
+    }
+
+    function paste() {
+        const clip = clipBoard[clipBoard.length - 1], data = clip.boardData;
+        const [x, y] = selectionStart = [
+            Math.min(boardX + clip.width - 1, board.width - 1),
+            Math.min(boardY + clip.height - 1, board.height - 1)
+        ];
+        forEachSelection((x, y) => {
+            const c = data[y - boardY][x - boardX];
+            board.layer.updateBlock(y, x, {type: c.type, rotate: c.rotate});
+        });
+        changeBlockFocus(true, boardX, boardY);
+    }
+
+    const isBoardFocus = () => !$keyModal.is(':visible') && $board.is(':focus');
+    const keyDownB = (o, d, f) => registerKeyDown(o, d, e => { if(isBoardFocus()) f(e); });
+
+    keyDownB('S', 'left',  e => changeBlockFocus(e.shiftKey, boardX - 1, boardY));
+    keyDownB('S', 'right', e => changeBlockFocus(e.shiftKey, boardX + 1, boardY));
+    keyDownB('S', 'up',    e => changeBlockFocus(e.shiftKey, boardX, boardY - 1));
+    keyDownB('S', 'down',  e => changeBlockFocus(e.shiftKey, boardX, boardY + 1));
+    keyDownB('S', 'pageup',   e => changeBlockFocus(e.shiftKey, boardX, 0));
+    keyDownB('S', 'pagedown', e => changeBlockFocus(e.shiftKey, boardX, -1));
+    keyDownB('S', 'home',     e => changeBlockFocus(e.shiftKey, 0, boardY));
+    keyDownB('S', 'end',      e => changeBlockFocus(e.shiftKey, -1, boardY));
+    keyDownB('',  'space', _ => execCommand(RotateCommand, +1));
+    keyDownB('s', 'space', _ => execCommand(RotateCommand, -1));
+    keyDownB('c', 'space', _ => execCommand(RotateResetCommand));
+    keyDownB('', 'backspace', _ => execCommand(PutBlockCommand, Yun.None));
+    keyDownB('', 'delete',    _ => execCommand(PutBlockCommand, Yun.None));
+    keyDownB('c', 'a', _ => {
+        selectionStart = [0, 0];
+        changeBlockFocus(true, -1, -1);
+    });
+    keyDownB('c', 'c', _ => copy());
+    keyDownB('c', 'x', _ => { copy(); execCommand(PutBlockCommand, Yun.None); });
+    keyDownB('c', 'v', _ => paste());
+    keyDownB('c', 's', _ => saveNew());
+    keyDownB('c', 'y', _ => redoCommand());
+    keyDownB('c', 'z', _ => undoCommand());
+    keyDownB('s', '/', _ => { $keyModal.show(300); $keyModal.focus(); });
+
 
     $(document).keydown(e => {
         const target = e.target.tagName.toLowerCase();
@@ -386,107 +441,8 @@ jQuery($ => {
         if($keyModal.is(':visible')) {
             return keydownOnKeyModal(e);
         }
-
-        if($board.is(':focus')) {
-            switch(e.keyCode) {
-            case 37: case 38: case 39: case 40: // ←↑→↓
-                changeBlockFocus(e.shiftKey, boardX + dx[e.which - 37], boardY + dy[e.which - 37]);
-                return false;
-
-            case 33: // PageUp
-                changeBlockFocus(e.shiftKey, boardX, 0); return false;
-            case 34: // PageDown
-                changeBlockFocus(e.shiftKey, boardX, -1); return false;
-            case 35: // Home
-                changeBlockFocus(e.shiftKey, -1, boardY); return false;
-            case 36: // End
-                changeBlockFocus(e.shiftKey, 0, boardY); return false;
-
-            case 32: // space
-                if(e.ctrlKey) {
-                    execCommand(RotateResetCommand);
-                } else {
-                    if(e.shiftKey) {
-                        execCommand(RotateCommand, -1);
-                    } else {
-                        execCommand(RotateCommand, +1);
-                    }
-                }
-                return false;
-
-            case 8: case 46: // backspace, delete
-                execCommand(PutBlockCommand, Yun.None);
-                return false;
-
-            case 65: // a
-                if(e.ctrlKey) {
-                    selectionStart = [0, 0];
-                    changeBlockFocus(true, -1, -1);
-                    return false;
-                }
-
-            case 67: case 88: // cx
-                if(e.ctrlKey) {
-                    const data = [];
-                    const [x1, y1, x2, y2] = selectionCoordinates();
-                    forEachSelection(y => data.push([]), (x, y) => {
-                        data[y - y1].push(board.layer.data[y][x]);
-                    });
-                    if(e.which == 88) {
-                        execCommand(PutBlockCommand, Yun.None);
-                    }
-                    clipBoard.push({
-                        stageName: board.stageName,
-                        timestamp: Date.now(),
-                        width: x2 - x1 + 1,
-                        height: y2 - y1 + 1,
-                        boardData: data,
-                    });
-                    return false;
-                }
-
-            case 86: // v
-                if(e.ctrlKey) {
-                    const clip = clipBoard[clipBoard.length - 1], data = clip.boardData;
-                    const [x, y] = selectionStart = [
-                        Math.min(boardX + clip.width - 1, board.width - 1),
-                        Math.min(boardY + clip.height - 1, board.height - 1)
-                    ];
-                    forEachSelection((x, y) => {
-                        const c = data[y - boardY][x - boardX];
-                        board.layer.updateBlock(y, x, {type: c.type, rotate: c.rotate});
-                    });
-                    changeBlockFocus(true, boardX, boardY);
-                    return false;
-                }
-
-            case 83: // s
-                if(e.ctrlKey) {
-                    saveNew();
-                    return false;
-                }
-
-            case 191: // /?
-                if(e.shiftKey) {
-                    $keyModal.show(300);
-                    $keyModal.focus();
-                    return false;
-                }
-
-            case 89: // y
-                if(e.ctrlKey) {
-                    redoCommand();
-                    return false;
-                }
-
-            case 90: // z
-                if(e.ctrlKey) {
-                    undoCommand();
-                    return false;
-                }
-            }
-        }
     });
+
 
     $(document).keypress($board, e => {
         const target = e.target.tagName.toLowerCase();
