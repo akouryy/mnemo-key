@@ -29,8 +29,8 @@ const dx = [-1, 0, 1, 0], dy = [0, -1, 0, 1];
 
 class Layer {
     constructor(height, width) {
-        this.width = width;
         this.height = height;
+        this.width = width;
         this.data = Yun.Arrays.new_repeat(
             height, width, Object.freeze({type: null, rotate: 0})
         );
@@ -46,13 +46,31 @@ class Layer {
         const before = this.data[y][x];
 
         if(rotate === -1) {
-            console.log(x,y,before,type);
             rotate = type && Blocks[type].rotatable ? (before.rotate + rotateDiff + 4) % 4 : 0;
         }
 
         this.data[y][x] = Object.freeze({type: type, rotate: rotate});
 
         return {before: before, after: this.data[y][x]};
+    }
+
+    fromBoardData(save) {
+        for(const b of save) {
+            this.updateBlock(b.y, b.x, {type: b.type, rotate: b.rotate});
+        }
+        return this;
+    }
+
+    toBoardData() {
+        const bd = [];
+        for(let y = 0; y < this.height; y++) {
+            for(let x = 0; x < this.width; x++) {
+                if(this.data[y][x].type !== null) {
+                    bd.push({x: x, y: y, type: this.data[y][x].type, rotate: this.data[y][x].rotate});
+                }
+            }
+        }
+        return bd;
     }
 }
 
@@ -164,21 +182,18 @@ jQuery($ => {
 
     function saveNew() {
         if(!board) return;
-        const data = [];
-        for(let y = 0; y < board.height; y++) {
-            for(let x = 0; x < board.width; x++) {
-                if(board.layer.data[y][x].type !== null) {
-                    data.push({x: x, y: y, type: board.layer.data[y][x].type, rotate: board.layer.data[y][x].rotate});
-                }
-            }
-        }
-        newData.push({stageName: board.stageName, timestamp: Date.now(), boardData: data});
+        newData.push({
+            stageName: board.stageName,
+            timestamp: Date.now(),
+            boardData: board.layer.toBoardData(),
+        });
         $newBoardData.val(JSON.stringify(boardData.concat(newData)));
         updateNewSaveList();
         alert("新しいセーブデータを localStorage.boardData に保存する前に、必ず以前の localStorage.boardData のバックアップをとってください。");
     }
 
     function initBoard(data) {
+        const stage = Stages.find(s => s.name === data.stageName);
         $newSave.prop('disabled', false);
 
         board = {
@@ -186,10 +201,7 @@ jQuery($ => {
             width: stage.width,
             stageName: stage.name,
         };
-        board.layer = new Layer(board.height, board.width);
-        for(const d of data.boardData) {
-            board.layer.updateBlock(d.y, d.x, {type: d.type, rotate: d.rotate});
-        }
+        board.layer = new Layer(board.height, board.width).fromBoardData(data.boardData);
 
         $board.html('');
         board$Td = [];
