@@ -55,6 +55,7 @@ class Layer {
 
         const change = {before: before, after: this.data[y][x]};
         this.blockUpdated(y, x, change);
+        console.log(y, x, change);
         return change;
     }
 
@@ -92,7 +93,7 @@ class RotateCommand extends Command {
         }
     }
     undo() {
-        exec(-this.rotateDiff);
+        this.exec(-this.rotateDiff);
     }
 }
 
@@ -350,7 +351,7 @@ jQuery($ => {
         }
     }
 
-    const commandHistory = Yun([]);
+    let commandHistory = Yun([]), commandIndex = -1;
     function execCommand(commandClass, ...args) {
         const [x1, y1, x2, y2] = selectionCoordinates();
         const command = new commandClass({
@@ -359,8 +360,24 @@ jQuery($ => {
             cursor: {x: boardX, y: boardY}
         }, ...args);
         command.exec();
+        commandIndex += 1;
+        if(commandIndex !== commandHistory.length) {
+            commandHistory = commandHistory.slice(0, commandIndex);
+        }
         commandHistory.push(command);
-        console.log(commandHistory);
+    }
+    function undoCommand() {
+        if(commandIndex >= 0) {
+            commandHistory[commandIndex].undo();
+            commandIndex -= 1;
+        }
+    }
+    function redoCommand() {
+        if(commandIndex < commandHistory.length - 1) {
+            commandIndex += 1;
+            commandHistory[commandIndex].exec();
+            console.log(commandHistory[commandIndex]);
+        }
     }
 
     $(document).keydown(e => {
@@ -453,6 +470,18 @@ jQuery($ => {
                 if(e.shiftKey) {
                     $keyModal.show(300);
                     $keyModal.focus();
+                    return false;
+                }
+
+            case 89: // y
+                if(e.ctrlKey) {
+                    redoCommand();
+                    return false;
+                }
+
+            case 90: // z
+                if(e.ctrlKey) {
+                    undoCommand();
                     return false;
                 }
             }
