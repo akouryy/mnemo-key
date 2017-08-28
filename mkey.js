@@ -35,6 +35,7 @@ class Layer {
             height, width, Object.freeze({type: Yun.None, rotate: 0})
         );
         Object.freeze(this.data);
+        this.blockUpdated = () => {};
     }
 
     updateBlock(y, x, {type = this.data[y][x].type, rotate = -1, rotateDiff = 0}) {
@@ -52,7 +53,9 @@ class Layer {
 
         this.data[y][x] = Object.freeze({type: type, rotate: rotate});
 
-        return {before: before, after: this.data[y][x]};
+        const change = {before: before, after: this.data[y][x]};
+        this.blockUpdated(y, x, change);
+        return change;
     }
 
     fromBoardData(save) {
@@ -66,6 +69,71 @@ class Layer {
         return this.data.flat_map((dy, y) => dy.flat_map((d, x) =>
             d.type.fold([], t => [{x: x, y: y, type: t, rotate: d.rotate}])
         ));
+    }
+}
+
+class Command {
+    constructor({layer, selection, cursor}) {
+        this.layer = layer;
+        this.selection = selection;
+        this.cursor = cursor;
+    }
+}
+
+class RotateCommand extends Command {
+    constructor(env, rotateDiff) {
+        super(env);
+        this.rotateDiff = rotateDiff;
+    }
+    exec(rotateDiff = this.rotateDiff) {
+        const {x1, x2, y1, y2} = this.selection;
+        for(let y = y1; y <= y2; y++) for(let x = x1; x <= x2; x++) {
+            this.layer.updateBlock(y, x, {rotateDiff: rotateDiff});
+        }
+    }
+    undo() {
+        exec(-this.rotateDiff);
+    }
+}
+
+class RotateResetCommand extends Command {
+    constructor(env) {
+        super(env);
+    }
+    exec() {
+        const {x1, x2, y1, y2} = this.selection;
+        this.before = [];
+        for(let y = y1; y <= y2; y++) for(let x = x1; x <= x2; x++) {
+            const {before: {rotate}} =
+                this.layer.updateBlock(y, x, {rotate: 0});
+            this.before.push({y: y, x: x, rotate: rotate});
+        }
+    }
+    undo() {
+        for(const {y, x, rotate} of this.before) {
+            this.layer.updateBlock(y, x, {rotate: rotate});
+        }
+    }
+}
+
+class PutBlockCommand extends Command {
+    constructor(env, blockType) {
+        super(env);
+        this.blockType = blockType;
+    }
+    exec() {
+        const {x1, x2, y1, y2} = this.selection;
+        this.before = [];
+        for(let y = y1; y <= y2; y++) for(let x = x1; x <= x2; x++) {
+            const {before: {type}} =
+                this.layer.updateBlock(y, x, {type: this.blockType});
+            this.before.push({y: y, x: x, blockType: type});
+        }
+    }
+    undo() {
+        for(const {y, x, blockType} of this.before) {
+            this.layer.updateBlock(y, x, {type: blockType});
+        }
     }
 }
 
@@ -194,6 +262,7 @@ jQuery($ => {
             stageName: stage.name,
         };
         board.layer = new Layer(board.height, board.width).fromBoardData(data.boardData);
+        board.layer.blockUpdated = blockUpdated;
 
         $board.html('');
         board$Td = [];
@@ -270,9 +339,7 @@ jQuery($ => {
         forEachSelection((x, y) => board$Td[y][x].addClass('selection'));
     }
 
-    function updateBlock({x = boardX, y = boardY, type, rotate, rotateDiff}) {
-        const d = board.layer.updateBlock(y, x, {type: type, rotate: rotate, rotateDiff: rotateDiff});
-
+    function blockUpdated(y, x, d) {
         const $td = board$Td[y][x];
         $td.html('');
         $td.removeClass(`rotate-${d.before.rotate}`);
@@ -283,10 +350,17 @@ jQuery($ => {
         }
     }
 
-    function updateBlockSelection({type, rotate, rotateDiff}) {
-        forEachSelection((x, y) =>
-            updateBlock({x: x, y: y, type: type, rotate: rotate, rotateDiff: rotateDiff})
-        );
+    const commandHistory = Yun([]);
+    function execCommand(commandClass, ...args) {
+        const [x1, y1, x2, y2] = selectionCoordinates();
+        const command = new commandClass({
+            layer: board.layer,
+            selection: {x1: x1, y1: y1, x2: x2, y2: y2},
+            cursor: {x: boardX, y: boardY}
+        }, ...args);
+        command.exec();
+        commandHistory.push(command);
+        console.log(commandHistory);
     }
 
     $(document).keydown(e => {
@@ -313,18 +387,18 @@ jQuery($ => {
 
             case 32: // space
                 if(e.ctrlKey) {
-                    updateBlockSelection({rotate: 0});
+                    execCommand(RotateResetCommand);
                 } else {
                     if(e.shiftKey) {
-                        updateBlockSelection({rotateDiff: -1});
+                        execCommand(RotateCommand, -1);
                     } else {
-                        updateBlockSelection({rotateDiff: +1});
+                        execCommand(RotateCommand, +1);
                     }
                 }
                 return false;
 
             case 8: case 46: // backspace, delete
-                updateBlockSelection({type: Yun.None});
+                execCommand(PutBlockCommand, Yun.None);
                 return false;
 
             case 65: // a
@@ -341,7 +415,9 @@ jQuery($ => {
                     forEachSelection(y => data.push([]), (x, y) => {
                         data[y - y1].push(board.layer.data[y][x]);
                     });
-                    if(e.which == 88) updateBlockSelection({type: Yun.None});
+                    if(e.which == 88) {
+                        execCommand(PutBlockCommand, Yun.None);
+                    }
                     clipBoard.push({
                         stageName: board.stageName,
                         timestamp: Date.now(),
@@ -361,7 +437,7 @@ jQuery($ => {
                     ];
                     forEachSelection((x, y) => {
                         const c = data[y - boardY][x - boardX];
-                        updateBlock({x: x, y: y, type: c.type, rotate: c.rotate});
+                        board.layer.updateBlock(y, x, {type: c.type, rotate: c.rotate});
                     });
                     changeBlockFocus(true, boardX, boardY);
                     return false;
@@ -398,7 +474,7 @@ jQuery($ => {
                 const b = focusedBlock().type.flat_map(t => Yun.Maybe.new_u(m[t]))
                                              .get_or(m.default);
                 if(b) {
-                    updateBlockSelection({type: Yun.Some(b)});
+                    execCommand(PutBlockCommand, Yun.Some(b));
                     return false;
                 }
             }
