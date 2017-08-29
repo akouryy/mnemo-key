@@ -17,40 +17,49 @@ const Yun = function Yun(arg) {
 Yun.ArgumentError = class ArgumentError extends Error {};
 
 Yun.Array = class YunArray extends G.Array {
-    static new_repeat(...args) {
-        if(args.length < 2) throw new Yun.ArgumentError(
-            `Yun.Array.new_repeat(size+, val): called with ${args.length} argument(s).`
+    constructor(sizes, fn = () => {}) {
+        if(!Array.isArray(sizes)) sizes = [sizes];
+        super(sizes[0]);
+        this.sizes = sizes.slice();
+        this.dimension = sizes.length;
+        if(this.dimension === 0) throw new Yun.ArgumentError(
+            'new Yun.Array([size+], fn): no size given.'
         );
-        const val = args.pop(), size = args.shift();
-        const ret = new this(size);
-        ret.dimension = args.length + 1;
-        if(args.length == 0) {
-            for(let i = 0; i < size; i++) ret[i] = val;
-        } else {
-            for(let i = 0; i < size; i++) ret[i] = this.new_repeat(...args, val);
-        }
-        return ret;
-    }
-    static new_repeat_fn(...args) {
-        if(args.length < 2) throw new Yun.ArgumentError(
-            `Yun.Array.new_repeat_fn(size+, fn): called with ${args.length} argument(s).`
-        );
-        const fn = args.pop(), size = args.shift();
-        const ret = new this(size);
-        ret.dimension = args.length + 1;
-        if(args.length == 0) {
-            for(let i = 0; i < size; i++) ret[i] = fn(i);
-        } else {
-            for(let i = 0; i < size; i++) ret[i] = this.new_repeat_fn(...args, (...a) => fn(i,...a));
-        }
-        return ret;
+        if(this.dimension > 1)
+            for(let i = 0; i < this.length; i++)
+                this[i] = new Yun.Array(sizes.slice(1));
+        this.map_d_bang((_, indexes) => fn(...indexes));
     }
 
-    flat_map(f) {
-        let g = Yun([]).concat(...this.map((...args)=>f(...args)));
-        return g;
+    at(i, ...js) {
+        if(js.length === 0) return this[i];
+        else return this[i].at(...js);
+    }
+
+    map_d(fn) {
+        return new Yun.Array(this.sizes, (_, is) => fn(this.at(...is), is));
+    }
+
+    map_d_bang(fn, indexes = []) {
+        const s = this.sizes[0];
+        if(this.dimension === 1) {
+            for(let i = 0; i < this.length; i++) this[i] = fn(this[i], indexes + [i]);
+        } else {
+            for(let i = 0; i < this.length; i++) this[i].map_d_bang(fn, indexes + [i]);
+        }
+    }
+
+    flat_map(fn, indexes = []) {
+        const a = new Yun.Array(0);
+        if(this.dimension === 1) {
+            for(let i = 0; i < this.length; i++) a.push(...fn(this[i], indexes + [i]));
+        } else {
+            for(let i = 0; i < this.length; i++) a.push(...this[i].flat_map(fn, indexes + [i]));
+        }
+        return a;
     }
 };
+
 
 Yun.Maybe = class Maybe {
     static new_u(val) { return val !== void 0 ? Yun.Some(val) : Yun.None; }
@@ -82,7 +91,5 @@ Yun.Maybe = class Maybe {
     get_or   (if_none) { return this.some ? this.val : if_none; }
     get_or_fn(if_none) { return this.some ? this.val : if_none(); }
 };
-
 Yun.None = new Yun.Maybe(false);
-
 Yun.Some = (val) => new Yun.Maybe(true, val);

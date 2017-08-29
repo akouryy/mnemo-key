@@ -31,29 +31,26 @@ class Layer {
     constructor(height, width) {
         this.height = height;
         this.width = width;
-        this.data = Yun.Array.new_repeat(
-            height, width, Object.freeze({type: Yun.None, rotate: 0})
-        );
-        Object.freeze(this.data);
+        this.blocks = new Yun.Array([height, width], _ => Object.freeze({type: Yun.None, rotate: 0}));
         this.blockUpdated = () => {};
     }
 
-    updateBlock(y, x, {type = this.data[y][x].type, rotate = -1, rotateDiff = 0}) {
+    updateBlock(y, x, {type = this.blocks[y][x].type, rotate = -1, rotateDiff = 0}) {
         if(rotate !== -1 && rotateDiff !== 0) throw new Yun.ArgumentError(
             "Layer#updateBlock(y, x, {type?, rotate|rotateDiff?}): " +
             "called with both rotate and rotateDiff specified."
         );
 
-        const before = this.data[y][x];
+        const before = this.blocks[y][x];
 
         if(rotate === -1) {
             rotate = type.filter(t => Blocks[t].rotatable)
                          .fold(0, _ =>(before.rotate + rotateDiff + 4) % 4);
         }
 
-        this.data[y][x] = Object.freeze({type: type, rotate: rotate});
+        this.blocks[y][x] = Object.freeze({type: type, rotate: rotate});
 
-        const change = {before: before, after: this.data[y][x]};
+        const change = {before: before, after: this.blocks[y][x]};
         this.blockUpdated(y, x, change);
         return change;
     }
@@ -66,9 +63,10 @@ class Layer {
     }
 
     toBoardData() {
-        return this.data.flat_map((dy, y) => dy.flat_map((d, x) =>
+        const x = this.blocks.flat_map((d, [y, x]) =>
             d.type.fold([], t => [{x: x, y: y, type: t, rotate: d.rotate}])
-        ));
+        ); console.log(x);
+        return x;
     }
 }
 
@@ -266,7 +264,7 @@ jQuery($ => {
 
         $board.html('');
         board$Td = [];
-        for(const [y, row] of board.layer.data.entries()) {
+        for(const [y, row] of board.layer.blocks.entries()) {
             const $tr = $('<tr>').appendTo($board);
             const row$Td = [];
             board$Td.push(row$Td);
@@ -295,7 +293,7 @@ jQuery($ => {
         focusedBlock$Td().addClass('focus');
     }
 
-    function focusedBlock() { return board.layer.data[boardY][boardX]; }
+    function focusedBlock() { return board.layer.blocks[boardY][boardX]; }
     function focusedBlock$Td() { return board$Td[boardY][boardX]; }
 
     function selectionCoordinates() {
@@ -382,7 +380,7 @@ jQuery($ => {
         const data = [];
         const [x1, y1, x2, y2] = selectionCoordinates();
         forEachSelection(y => data.push([]), (x, y) => {
-            data[y - y1].push(board.layer.data[y][x]);
+            data[y - y1].push(board.layer.blocks[y][x]);
         });
         clipBoard.push({
             stageName: board.stageName,
