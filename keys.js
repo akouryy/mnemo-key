@@ -37,7 +37,7 @@ jQuery($ => {
         const target = ev.target.tagName.toLowerCase();
         if(['form', 'input', 'select', 'option', 'button'].includes(target)) return;
 
-        const events = KeyDownEvents[[ev.shiftKey, ev.ctrlKey, ev.altKey, ev.which]];
+        const events = KeyDownEvents[[ev.shiftKey, MCtrlKey(ev), ev.altKey, ev.which]];
         if(events) {
             for(const fn of events) {
                 fn(ev);

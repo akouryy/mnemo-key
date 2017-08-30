@@ -63,10 +63,9 @@ class Layer {
     }
 
     toBoardData() {
-        const x = this.blocks.flat_map((d, [y, x]) =>
+        return this.blocks.flat_map((d, [y, x]) =>
             d.type.fold([], t => [{x: x, y: y, type: t, rotate: d.rotate}])
-        ); console.log(x);
-        return x;
+        );
     }
 }
 
@@ -148,6 +147,7 @@ jQuery($ => {
     const $board        = $('#board');
     const $keyTable     = $('#key-table');
     const $keyModal     = $('#key-modal');
+    $keyModal.find('i.ctrl').text(MCtrl);
     let stage = Stages[0];
     let boardData = [], newData = [];
     let board$Td, board, selectionStart; // initialized in initBoard().
