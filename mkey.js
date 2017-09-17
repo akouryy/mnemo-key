@@ -1,6 +1,8 @@
 //const Blocks = require('./block-configs.js');
 'use strict';
 
+function D(...args) { console.log(...args); return args[args.length - 1]; }
+
 function setBlockRawKey(type) {
     if(type === 'empty') return;
     const block = Blocks[type];

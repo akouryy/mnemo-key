@@ -43,18 +43,18 @@ Yun.Array = class YunArray extends G.Array {
     map_d_bang(fn, indexes = []) {
         const s = this.sizes[0];
         if(this.dimension === 1) {
-            for(let i = 0; i < this.length; i++) this[i] = fn(this[i], indexes + [i]);
+            for(let i = 0; i < this.length; i++) this[i] = fn(this[i], [...indexes, i]);
         } else {
-            for(let i = 0; i < this.length; i++) this[i].map_d_bang(fn, indexes + [i]);
+            for(let i = 0; i < this.length; i++) this[i].map_d_bang(fn, [...indexes, i]);
         }
     }
 
     flat_map(fn, indexes = []) {
         const a = new Yun.Array(0);
         if(this.dimension === 1) {
-            for(let i = 0; i < this.length; i++) a.push(...fn(this[i], indexes + [i]));
+            for(let i = 0; i < this.length; i++) a.push(...fn(this[i], [...indexes, i]));
         } else {
-            for(let i = 0; i < this.length; i++) a.push(...this[i].flat_map(fn, indexes + [i]));
+            for(let i = 0; i < this.length; i++) a.push(...this[i].flat_map(fn, [...indexes, i]));
         }
         return a;
     }
